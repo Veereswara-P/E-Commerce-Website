@@ -6,7 +6,7 @@ A modern, full-stack e-commerce application featuring a feature-rich frontend bu
 🚀 Live Demo
 Frontend Application: https://frontend-service-721810542467.asia-south2.run.app/
 
-Backend API Base URL: https://e-commerce-backend-721810542467.asia-south2.run.app/api
+Backend Base URL: https://e-commerce-backend-721810542467.asia-south2.run.app
 
 ✨ Features
 Frontend
@@ -24,7 +24,7 @@ Shopping Cart: Fully functional shopping cart to add, update quantities, and rem
 
 Wishlist: Functionality for users to save and manage their favorite products.
 
-Product Discovery: Browse products by category, an infinite scroll on the homepage, and a global search feature.
+Product Discovery: Browse products by category and product name, an infinite scroll on the homepage, and a global search feature.
 
 Backend
 RESTful API: A robust REST API built with Node.js and Express.js.
@@ -73,7 +73,6 @@ The project's configuration is managed through environment variables.
 Backend (backend-service/.env)
 This file contains the database credentials and security keys for the backend service.
 
-Ini, TOML
 
 # Google Cloud SQL Database Connection
 DB_USER=your_db_user
