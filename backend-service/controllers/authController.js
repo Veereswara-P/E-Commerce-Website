@@ -1,147 +1,125 @@
-// backend-service/controllers/authController.js
-
 const pool = require('../config/db');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { sendSuccess } = require('../utils/responseHandler');
+const { BadRequestError, NotFoundError } = require('../utils/customErrors');
 
-// This helper function now just returns the token, which we can use everywhere.
+// Helper function to generate a JWT, now includes the user's role
 const generateToken = (user) => {
-  return jwt.sign(
-    { id: user.customer_id, name: user.customer_name, gender: user.customer_gender },
-    process.env.JWT_SECRET,
-    { expiresIn: '1h' }
-  );
+  const payload = { 
+    id: user.customer_id, 
+    name: user.customer_name, 
+    role: user.role // Add role to the token payload
+  };
+  return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
 };
 
-/**
- * Registers a new customer.
- */
-exports.register = async (req, res) => {
+// Registers a new customer
+exports.register = async (req, res, next) => {
   const { name, email, password, gender } = req.body;
   try {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
+    // The RETURNING clause now includes the 'role' field
     const { rows } = await pool.query(
-      'INSERT INTO customer (customer_name, customer_email, customer_password, customer_gender) VALUES ($1, $2, $3, $4) RETURNING customer_id, customer_name, customer_email, customer_gender',
+      'INSERT INTO customer (customer_name, customer_email, customer_password, customer_gender) VALUES ($1, $2, $3, $4) RETURNING customer_id, customer_name, customer_email, customer_gender, role',
       [name, email, hashedPassword, gender]
     );
 
     const newUser = rows[0];
     const token = generateToken(newUser);
-
-    // Set httpOnly cookie for web browser security
-    res.cookie('token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 3600000 // 1 hour
-    });
-
-    // Also return the token and user data for frontend context
-    res.status(201).json({ token, user: newUser });
-
+    
+    sendSuccess(res, 201, { token, user: newUser }, 'Account created successfully.');
   } catch (err) {
-    console.error("Register Error:", err.message);
     if (err.message.includes('duplicate key value')) {
-      return res.status(400).json({ msg: 'An account with this email already exists.' });
+        return next(new BadRequestError('An account with this email already exists.'));
     }
-    res.status(500).json({ error: 'Server error during registration.' });
+    next(err);
   }
 };
 
-/**
- * Logs in a customer.
- */
-exports.login = async (req, res) => {
+// Logs in a customer
+exports.login = async (req, res, next) => {
   const { email, password } = req.body;
   try {
+    // Select all fields, including the new 'role'
     const { rows } = await pool.query('SELECT * FROM customer WHERE customer_email = $1', [email]);
     const user = rows[0];
 
-    if (!user) return res.status(400).json({ error: 'Invalid credentials.' });
+    if (!user) {
+        throw new BadRequestError('Invalid credentials.');
+    }
 
     const isMatch = await bcrypt.compare(password, user.customer_password);
-    if (!isMatch) return res.status(400).json({ error: 'Invalid credentials.' });
+    if (!isMatch) {
+        throw new BadRequestError('Invalid credentials.');
+    }
     
     const token = generateToken(user);
 
-    res.cookie('token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 3600000
-    });
+    // Remove the password before sending the user object in the response
+    delete user.customer_password;
     
-    // Return token and user data for frontend context
-    res.json({ token, user });
-
+    sendSuccess(res, 200, { token, user });
   } catch (err) {
-    console.error("Login Error:", err.message);
-    res.status(500).json({ error: 'Server error during login.' });
+    next(err);
   }
 };
 
-/**
- * --- NEW FUNCTION TO UPDATE USER PROFILE ---
- */
-exports.updateProfile = async (req, res) => {
+// Updates the profile of the currently logged-in user
+exports.updateProfile = async (req, res, next) => {
   const { name, email } = req.body;
-  const customerId = req.user.id; // From auth middleware
-
-  if (!name || !email) {
-    return res.status(400).json({ error: 'Name and email are required.' });
-  }
+  const customerId = req.user.id; 
 
   try {
-    const existingUser = await pool.query(
-      'SELECT customer_id FROM customer WHERE customer_email = $1 AND customer_id != $2',
-      [email, customerId]
-    );
-
-    if (existingUser.rows.length > 0) {
-      return res.status(400).json({ error: 'This email is already in use by another account.' });
-    }
-
     const { rows } = await pool.query(
-      'UPDATE customer SET customer_name = $1, customer_email = $2 WHERE customer_id = $3 RETURNING customer_id, customer_name, customer_email, customer_gender',
+      'UPDATE customer SET customer_name = $1, customer_email = $2 WHERE customer_id = $3 RETURNING customer_id, customer_name, customer_email, customer_gender, role',
       [name, email, customerId]
     );
 
     if (rows.length === 0) {
-      return res.status(404).json({ error: 'User not found.' });
+      throw new NotFoundError('User not found.');
     }
 
-    res.json({ user: rows[0] });
-
+    sendSuccess(res, 200, { user: rows[0] }, 'Profile updated successfully.');
   } catch (err) {
-    console.error("Update Profile Error:", err.message);
-    res.status(500).json({ error: 'Failed to update profile.' });
+    next(err);
   }
 };
 
-
-/**
- * Logs out the customer by clearing the cookie.
- */
+// Logs out the customer
 exports.logout = (req, res) => {
-  res.clearCookie('token');
-  res.status(200).json({ msg: 'Logged out successfully' });
+  // Logout is a simple client-side action, so a direct response is fine.
+  res.status(200).json({ status: 'success', message: 'Logged out successfully' });
 };
 
-/**
- * Gets the currently logged-in user's data.
- */
-exports.getMe = async (req, res) => {
+// Gets the currently logged-in user's data
+// Gets the currently logged-in user's data
+exports.getMe = async (req, res, next) => {
   try {
-    const { rows } = await pool.query('SELECT customer_id, customer_name, customer_email, customer_gender FROM customer WHERE customer_id = $1', [req.user.id]);
+    // --- FIX: Add the 'role' column to the SELECT statement ---
+    const { rows } = await pool.query(
+        'SELECT customer_id, customer_name, customer_email, customer_gender, role FROM customer WHERE customer_id = $1', 
+        [req.user.id]
+    );
     
     if (rows.length === 0) {
-      return res.status(404).json({ msg: 'User not found' });
+      throw new NotFoundError('User not found');
     }
-    res.json(rows[0]);
+    sendSuccess(res, 200, rows[0]);
   } catch (err) {
-    console.error("Get Me Error:", err.message);
-    res.status(500).json({ error: 'Server Error' });
+    next(err);
+  }
+};
+
+// Deletes the currently logged-in user's account
+exports.deleteUser = async (req, res, next) => {
+  const customerId = req.user.id;
+  try {
+    await pool.query('DELETE FROM customer WHERE customer_id = $1', [customerId]);
+    sendSuccess(res, 200, null, 'Account deleted successfully.');
+  } catch (err) {
+    next(err);
   }
 };

@@ -1,15 +1,14 @@
-// backend-service/controllers/searchController.js
 const pool = require('../config/db');
 
 exports.searchAll = async (req, res) => {
-  const { q } = req.query; // The search query, e.g., /api/search?q=laptop
+  const { q } = req.query; 
 
   if (!q) {
     return res.status(400).json({ error: 'Search query "q" is required.' });
   }
 
   try {
-    const searchQuery = `%${q}%`; // Add wildcards for partial matching
+    const searchQuery = `%${q}%`; 
 
     // Search for matching products (by name or description)
     const productPromise = pool.query(
@@ -18,8 +17,9 @@ exports.searchAll = async (req, res) => {
     );
 
     // Search for matching categories (by name)
+    // FIX: Renamed 'category_image_url' to 'image_url' for consistency
     const categoryPromise = pool.query(
-      "SELECT * FROM categories WHERE category_name ILIKE $1",
+      "SELECT *, category_image_url AS image_url FROM categories WHERE category_name ILIKE $1",
       [searchQuery]
     );
 

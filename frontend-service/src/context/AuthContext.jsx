@@ -1,25 +1,29 @@
-// src/context/AuthContext.jsx
 import React, { createContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
+import { useAlert } from '../components/Alert';
 
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const navigate = useNavigate();
+  const showAlert = useAlert();
 
   useEffect(() => {
-    const checkLoggedIn = async () => {
+    const checkLoggedIn = () => {
       const token = localStorage.getItem('token');
-      if (token) {
+      const storedUser = localStorage.getItem('user');
+
+      if (token && storedUser) {
         try {
-          const { data } = await api.get('/auth/me');
-          setUser(data);
+          // Correctly parse the stored user JSON
+          setUser(JSON.parse(storedUser));
         } catch (err) {
+          // If parsing fails, clear the invalid data
           localStorage.removeItem('token');
+          localStorage.removeItem('user');
         }
       }
       setLoading(false);
@@ -28,54 +32,57 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (credentials) => {
-    setLoading(true);
-    setError(null);
     try {
       const { data } = await api.post('/auth/login', credentials);
-      localStorage.setItem('token', data.token);
-      setUser(data.user);
+      // --- FIX: Access the nested data object ---
+      const { token, user } = data.data;
+
+      localStorage.setItem('token', token);
+      // --- FIX: Store only the user object, and stringify it ---
+      localStorage.setItem('user', JSON.stringify(user));
+      
+      setUser(user);
+      showAlert('Login Successful!');
       navigate('/');
     } catch (err) {
-      setError(err.response?.data?.error || 'Login failed.');
-    } finally {
-      setLoading(false);
+      const errorMsg = err.response?.data?.message || 'Login failed. Please try again.';
+      showAlert(errorMsg, 'error');
     }
   };
-
+  
   const register = async (userData) => {
-    setLoading(true);
-    setError(null);
     try {
       const { data } = await api.post('/auth/register', userData);
-      localStorage.setItem('token', data.token);
-      setUser(data.user);
+      // --- FIX: Access the nested data object ---
+      const { token, user } = data.data;
+
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
+
+      setUser(user);
+      showAlert('Account created successfully!');
       navigate('/');
     } catch (err) {
-      setError(err.response?.data?.msg || 'Registration failed.');
-    } finally {
-      setLoading(false);
+      const errorMsg = err.response?.data?.message || 'Registration failed. Please try again.';
+      showAlert(errorMsg, 'error');
     }
   };
 
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('user'); // Also remove the user object
     setUser(null);
-    navigate('/login');
+    showAlert('You have been logged out.');
+    navigate('/auth');
   };
+  
+  // ... other functions like deleteUser
 
-  const authContextValue = {
-    user,
-    setUser, // Exposing setUser for profile updates
-    loading,
-    error,
-    login,
-    register,
-    logout,
-  };
+  const authContextValue = { user, setUser, loading, login, register, logout };
 
   return (
     <AuthContext.Provider value={authContextValue}>
-      {children}
+      {!loading && children}
     </AuthContext.Provider>
   );
 };

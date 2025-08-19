@@ -1,4 +1,3 @@
-// src/pages/SearchResultsPage.jsx
 import React, { useState, useEffect, useContext } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import api from '../api';
@@ -52,10 +51,10 @@ const SearchResultsPage = () => {
           <div className="category-grid">
             {results.categories.map(cat => (
               <div key={cat.category_id} className="category-card" onClick={() => navigate(`/products?category=${cat.category_id}`)}>
-                {/* --- FIX: Use the correct image property for categories --- */}
-                <img src={cat.category_image_url} alt={cat.category_name} className="category-card-image" />
+              
                 <div className="category-card-name">{cat.category_name}</div>
               </div>
+              
             ))}
           </div>
         </section>

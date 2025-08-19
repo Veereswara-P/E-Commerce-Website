@@ -2,6 +2,7 @@ const pool = require('../config/db');
 
 /**
  * Adds an item to the cart. If the item already exists, its quantity is increased.
+ * It also checks against the product's stock quantity.
  */
 exports.addToCart = async (req, res) => {
   const { productId, product_quantity = 1 } = req.body;
@@ -12,6 +13,25 @@ exports.addToCart = async (req, res) => {
   }
 
   try {
+    // 1. Get current stock and cart quantity
+    const productQuery = 'SELECT product_stock_quantity FROM products WHERE product_id = $1';
+    const productResult = await pool.query(productQuery, [productId]);
+
+    if (productResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Product not found.' });
+    }
+    const stockQuantity = productResult.rows[0].product_stock_quantity;
+
+    const cartQuery = 'SELECT product_quantity FROM cart WHERE customer_id = $1 AND product_id = $2';
+    const cartResult = await pool.query(cartQuery, [customerId, productId]);
+    const currentCartQuantity = cartResult.rows.length > 0 ? cartResult.rows[0].product_quantity : 0;
+
+    // 2. Check if the new quantity exceeds stock
+    if ((currentCartQuantity + product_quantity) > stockQuantity) {
+      return res.status(400).json({ error: 'Cannot add more items than available in stock.' });
+    }
+
+    // 3. Proceed with adding to cart
     const { rows } = await pool.query(
       `INSERT INTO cart (customer_id, product_id, product_quantity) VALUES ($1, $2, $3)
        ON CONFLICT (customer_id, product_id) DO UPDATE
@@ -33,7 +53,7 @@ exports.getCart = async (req, res) => {
   const customerId = req.user.id;
   try {
     const { rows } = await pool.query(
-      `SELECT p.product_id, p.product_name, p.product_price, p.category_image_url AS image_url, c.product_quantity
+      `SELECT p.product_id, p.product_name, p.product_price, p.product_stock_quantity, p.category_image_url AS image_url, c.product_quantity
        FROM cart c
        JOIN products p ON c.product_id = p.product_id
        WHERE c.customer_id = $1`,

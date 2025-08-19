@@ -1,9 +1,12 @@
-// src/components/Loader.jsx
-import React from 'react';
+import React from "react";
 
 
 const Loader = () => {
-  return <div className="loader"></div>;
+  return (
+    <div className="loader-container">
+      <img src="/MarketPlace logo.jpg" alt="Loading..." className="blinking-image" />
+    </div>
+  );
 };
 
 export default Loader;

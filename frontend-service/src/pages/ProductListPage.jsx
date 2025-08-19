@@ -1,50 +1,56 @@
-// src/pages/ProductListPage.jsx
-import React, { useState, useEffect, useContext } from 'react';
+import React from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import api from '../api';
 import ProductCard from '../components/ProductCard';
 import Loader from '../components/Loader';
 import { useCart } from '../context/CartContext.jsx';
 import { useWishlist } from '../context/WishlistContext.jsx';
 
+const fetchProductsByCategory = async (categoryId) => {
+  const { data } = await api.get('/products', {
+    params: { category_id: categoryId || undefined }
+  });
+  return data.data.products; 
+};
+
+const fetchCategories = async () => {
+    const { data } = await api.get('/categories');
+    return data.data;
+};
+
 const ProductListPage = () => {
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [searchParams] = useSearchParams();
   const categoryId = searchParams.get('category');
 
   const { addToCart } = useCart();
   const { toggleWishlist } = useWishlist();
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      setLoading(true);
-      try {
-        const response = await api.get('/products', {
-          params: {
-            category: categoryId || undefined
-          }
-        });
-        setProducts(response.data.products || response.data); // Handle both paginated and non-paginated responses
-      } catch (err) {
-        console.error("Failed to fetch products:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchProducts();
-  }, [categoryId]);
+  const { data: products, isLoading: isLoadingProducts } = useQuery({
+    queryKey: ['products', categoryId], 
+    queryFn: () => fetchProductsByCategory(categoryId)
+  });
 
-  if (loading) {
+  const { data: categories, isLoading: isLoadingCategories } = useQuery({
+    queryKey: ['categories'],
+    queryFn: fetchCategories
+  });
+
+  // --- FIX ---
+  // Use a non-strict (==) comparison to match the string from the URL with the number from the data.
+  const currentCategory = categories?.find(cat => cat.category_id == categoryId);
+
+  if (isLoadingProducts || isLoadingCategories) {
     return <Loader />;
   }
 
   return (
     <div className="container mx-auto mt-10 p-4">
       <h1 className="text-3xl font-bold mb-6">
-        {categoryId ? `Products in Category ${categoryId}` : 'All Products'}
+       
+        {currentCategory ? currentCategory.category_name : (categoryId ? `Category #${categoryId}` : 'All Products')}
       </h1>
-      {products.length > 0 ? (
+      {products && products.length > 0 ? (
         <div className="product-grid">
           {products.map(product => (
             <ProductCard

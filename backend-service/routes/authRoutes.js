@@ -1,16 +1,19 @@
 // routes/authRoutes.js
-
 const express = require('express');
-const { register, login, logout, getMe, updateProfile } = require('../controllers/authController');
-const auth = require('../middleware/auth'); // Import auth middleware
+const { register, login, logout, getMe, updateProfile, deleteUser } = require('../controllers/authController');
+// Import the new schema
+const { validate, registerSchema, loginSchema, updateProfileSchema } = require('../middleware/validation');
+const auth = require('../middleware/auth');
 const router = express.Router();
 
-router.post('/register', register);
-router.post('/login', login);
+router.post('/register', validate(registerSchema), register);
+router.post('/login', validate(loginSchema), login);
 router.post('/logout', logout);
 router.get('/me', auth, getMe);
 
-// Add this new route for updating the profile
-router.patch('/profile', auth, updateProfile);
+// Apply the validation middleware to the profile update route
+router.patch('/profile', auth, validate(updateProfileSchema), updateProfile);
+
+router.delete('/profile', auth, deleteUser);
 
 module.exports = router;
