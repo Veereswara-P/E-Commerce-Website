@@ -1,16 +1,16 @@
-E-Commerce-Website
+**E-Commerce-Website**
 
 MarketPlace E-Commerce Platform
 
 A modern, full-stack e-commerce application featuring a feature-rich frontend built with React and a robust backend API powered by Node.js, all deployed on Google Cloud Platform.
 
-🚀 Live Demo
+**🚀 Live Demo**
 Frontend Application: https://frontend-service-721810542467.asia-south2.run.app/
 
 Backend Base URL: https://backend-service-721810542467.asia-south2.run.app/
 
-✨ Features
-Frontend
+**✨ Features**
+Frontend:-
 Modern UI: A responsive and interactive user interface built with React and Vite.
 
 Component-Based Architecture: Reusable components for products, navigation, and user interactions.
@@ -27,7 +27,7 @@ Wishlist: Functionality for users to save and manage their favorite products.
 
 Product Discovery: Browse products by category and product name, an infinite scroll on the homepage, and a global search feature.
 
-Backend
+Backend:-
 RESTful API: A robust REST API built with Node.js and Express.js.
 
 Secure Authentication: JWT-based authentication with password hashing using bcryptjs.
@@ -38,29 +38,21 @@ Product Management: API endpoints to fetch products with advanced filtering, sor
 
 Cart & Wishlist Management: Secure endpoints to manage user-specific cart and wishlist data.
 
-🗃️ Database Schema
+**🗃️ Database Schema**
 The application uses Google Cloud SQL for PostgreSQL as its managed database service. The relational schema is designed to support all e-commerce functionalities, including tables for customers, products, categories, shopping cart, and wishlists.
 
-🛠️ Technology Stack
-Category
+ER Diagram : <img width="1285" height="730" alt="ER diagram" src="https://github.com/user-attachments/assets/d44e86f4-f6c3-4b39-94b1-3eba0252a6b2" />
 
-Technology
+**🛠️ Technology Stack**
 
-Frontend
 
-React.js, Vite, React Router, Axios, Tailwind CSS
+Frontend : React.js, Vite, React Router, Axios, Tailwind CSS
 
-Backend
+Backend : Node.js, Express.js, PostgreSQL
 
-Node.js, Express.js, PostgreSQL
+Auth : JSON Web Tokens (JWT), bcryptjs
 
-Auth
-
-JSON Web Tokens (JWT), bcryptjs
-
-Deployment
-
-Docker, Nginx, Google Cloud Run
+Deployment : Docker, Nginx, Google Cloud Run
 
 📂 Project Structure
 The project is organized in a monorepo style with two main directories:
@@ -69,37 +61,41 @@ The project is organized in a monorepo style with two main directories:
 ├── frontend-service/  # Contains the React frontend application
 └── backend-service/   # Contains the Node.js Express backend API
 
-⚙️ Environment Variables
+**⚙️ Environment Variables**
 The project's configuration is managed through environment variables.
 
 Backend (backend-service/.env)
 This file contains the database credentials and security keys for the backend service.
 
-# Google Cloud SQL Database Connection
+**Google Cloud SQL Database Connection**
 DB_USER=your_db_user
 DB_HOST=your_cloud_sql_ip_address
 DB_DATABASE=your_db_name
 DB_PASSWORD=your_db_password
 DB_PORT=5432
 
-# JWT Secret Key
+JWT Secret Key
 JWT_SECRET=your_super_secret_random_string
 
-# The URL of the deployed frontend for CORS
+The URL of the deployed frontend for CORS
 CLIENT_URL=https://frontend-service-721810542467.asia-south2.run.app
 
 Frontend (frontend-service/.env)
 This file tells the frontend where to find the backend API.
 
-# The full base URL of your deployed backend API
+The full base URL of your deployed backend API
 VITE_API_URL=https://backend-service-721810542467.asia-south2.run.app/api
 
-☁️ Deployment
+**☁️ Deployment**
 Both the frontend and backend services are containerized using Docker and are deployed on Google Cloud Run.
 
 Frontend: A production build of the React app is created and served via a lightweight Nginx server within its container.
 
 Backend: The Node.js Express API runs in its own container and connects to the managed Google Cloud SQL database instance.
+
+
+
+
 
 
 
